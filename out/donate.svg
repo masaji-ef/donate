@@ -1,15 +1,3 @@
-#!/bin/sh
-set -e
-
-mkdir -p out
-
-for line in $(cat wallets.txt); do
-  label=$(echo $line | cut -d: -f1)
-  uri=$(echo $line | cut -d: -f2-)
-  qrencode -s 10 -l M --background=FFFFFF --foreground=000000 -o "out/${label}.png" "$uri"
-done
-
-cat >out/donate.svg <<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -75,40 +63,3 @@ cat >out/donate.svg <<'SVG'
     <text x="688" y="398" font-family="monospace" font-size="14" fill="#ffffff" opacity="1.0" text-anchor="middle">Network: Monero</text>
   </g>
 </svg>
-SVG
-
-if command -v inkscape >/dev/null 2>&1; then
-  inkscape -w 2048 --export-type="png" out/donate.svg >/dev/null 2>&1
-fi
-
-echo
-echo "=== QR CODE VERIFICATION ==="
-errors=0
-for line in $(cat wallets.txt); do
-  label=$(echo $line | cut -d: -f1)
-  expected=$(echo $line | cut -d: -f2-)
-  if [ -f "out/${label}.png" ]; then
-    actual=$(zbarimg -q "out/${label}.png" 2>/dev/null | cut -d: -f2-)
-    if [ "$expected" = "$actual" ]; then
-      echo "  OK $label"
-    else
-      echo "  FAIL $label"
-      errors=$((errors + 1))
-    fi
-  fi
-done
-if [ $errors -eq 0 ]; then
-  echo "  ALL QR CODES VALID"
-else
-  echo "  $errors ERRORS FOUND"
-fi
-
-echo
-echo "=== FILES ==="
-echo "  out/*.png: $(ls -1 out/*.png 2>/dev/null | wc -l) files (QR codes + donate.png)"
-echo "  out/donate.svg: $(du -h out/donate.svg | cut -f1)"
-if [ -f out/donate.png ]; then
-  echo "  out/donate.png: $(du -h out/donate.png | cut -f1)"
-fi
-echo
-echo "=== DONE ==="
